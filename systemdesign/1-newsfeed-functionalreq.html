@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Why Capacity Estimation?</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+          font-family: 'DM Sans', sans-serif;
+          background: #f5f4f0;
+          min-height: 100vh;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 40px 20px;
+        }
+
+        .container { width: 100%; max-width: 860px; }
+
+        .heading {
+          text-align: center;
+          margin-bottom: 40px;
+        }
+        .heading h1 {
+          font-size: 13px;
+          font-family: 'DM Mono', monospace;
+          font-weight: 500;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: #888;
+          margin-bottom: 10px;
+        }
+        .heading h2 {
+          font-size: 26px;
+          font-weight: 600;
+          color: #1a1a1a;
+          letter-spacing: -0.02em;
+        }
+
+        .grid {
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 16px;
+        }
+
+        .card {
+          background: #fff;
+          border-radius: 16px;
+          padding: 28px 24px 24px;
+          border: 1px solid #e8e6e0;
+          transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+          position: relative;
+          overflow: hidden;
+        }
+
+        .card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0;
+          height: 3px;
+          border-radius: 16px 16px 0 0;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+
+        .card:hover { transform: translateY(-3px); box-shadow: 0 12px 32px rgba(0,0,0,0.08); border-color: transparent; }
+        .card:hover::before { opacity: 1; }
+
+        .card.purple::before { background: #7f77dd; }
+        .card.teal::before   { background: #1d9e75; }
+        .card.blue::before   { background: #378add; }
+        .card.coral::before  { background: #d85a30; }
+
+        .card-num {
+          font-family: 'DM Mono', monospace;
+          font-size: 11px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          color: #bbb;
+          margin-bottom: 16px;
+        }
+
+        .card-icon {
+          width: 44px;
+          height: 44px;
+          border-radius: 10px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-bottom: 16px;
+          font-size: 20px;
+        }
+
+        .purple .card-icon { background: #eeedfe; }
+        .teal   .card-icon { background: #e1f5ee; }
+        .blue   .card-icon { background: #e6f1fb; }
+        .coral  .card-icon { background: #faece7; }
+
+        .card-title {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
+          letter-spacing: -0.01em;
+          margin-bottom: 8px;
+        }
+
+        .card-desc {
+          font-size: 13px;
+          color: #888;
+          line-height: 1.6;
+          margin-bottom: 16px;
+        }
+
+        /* Example box inside card */
+        .example {
+          border-radius: 10px;
+          padding: 12px 14px;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .example-label {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+        }
+
+        .purple .example { background: #eeedfe; }
+        .purple .example-label { color: #7f77dd; }
+        .purple .example { color: #3c3489; }
+
+        .teal .example { background: #e1f5ee; }
+        .teal .example-label { color: #1d9e75; }
+        .teal .example { color: #085041; }
+
+        .blue .example { background: #e6f1fb; }
+        .blue .example-label { color: #378add; }
+        .blue .example { color: #0c447c; }
+
+        .coral .example { background: #faece7; }
+        .coral .example-label { color: #d85a30; }
+        .coral .example { color: #711313; }
+
+        /* DB comparison table in card 3 */
+        .db-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+        .db-table th {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          padding: 6px 8px;
+          text-align: left;
+          border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+        .db-table td {
+          padding: 6px 8px;
+          border-bottom: 1px solid rgba(0,0,0,0.05);
+          vertical-align: middle;
+        }
+        .db-table tr:last-child td { border-bottom: none; }
+
+        .tag {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 500;
+          padding: 2px 7px;
+          border-radius: 20px;
+          display: inline-block;
+          white-space: nowrap;
+        }
+        .tag-green  { background: #e1f5ee; color: #0f6e56; }
+        .tag-red    { background: #faece7; color: #993c1d; }
+        .tag-blue   { background: #e6f1fb; color: #185fa5; }
+
+        /* Read/write split in card 4 */
+        .rw-split {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .rw-box {
+          border-radius: 10px;
+          padding: 10px 12px;
+        }
+        .rw-box .rw-label {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 500;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+          margin-bottom: 4px;
+        }
+        .rw-box .rw-db {
+          font-size: 13px;
+          font-weight: 600;
+          letter-spacing: -0.01em;
+        }
+        .rw-box .rw-note {
+          font-size: 11px;
+          margin-top: 2px;
+        }
+        .rw-read  { background: #e6f1fb; }
+        .rw-read  .rw-label { color: #378add; }
+        .rw-read  .rw-db   { color: #0c447c; }
+        .rw-read  .rw-note { color: #185fa5; }
+        .rw-write { background: #faece7; }
+        .rw-write .rw-label { color: #d85a30; }
+        .rw-write .rw-db   { color: #711313; }
+        .rw-write .rw-note { color: #993c1d; }
+
+        .footer {
+          text-align: center;
+          margin-top: 32px;
+          font-size: 12px;
+          color: #bbb;
+          font-family: 'DM Mono', monospace;
+          letter-spacing: 0.06em;
+        }
+
+        @media (max-width: 580px) {
+          .grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="heading">
+        <h1>Capacity Estimation — Purpose</h1>
+        <h2>Why do we need capacity estimation?</h2>
+    </div>
+
+    <div class="grid">
+
+        <!-- 1: Servers & Databases -->
+        <div class="card purple">
+            <div class="card-num">01</div>
+            <div class="card-icon">🖥️</div>
+            <div class="card-title">Determine servers &amp; databases</div>
+            <div class="card-desc">Estimating DAU, MAU, and throughput tells us exactly how many servers and databases we need to handle the load.</div>
+            <div class="example">
+                <div class="example-label">Example</div>
+                Server handles <strong>1M req/hr</strong> but system needs <strong>10M req/hr</strong> → provision <strong>10 servers</strong>
+            </div>
+        </div>
+
+        <!-- 2: Cost Management -->
+        <div class="card teal">
+            <div class="card-num">02</div>
+            <div class="card-icon">💰</div>
+            <div class="card-title">Cost management</div>
+            <div class="card-desc">Servers and databases cost money. Capacity estimation prevents overprovisioning (wasted spend) and underprovisioning (outages).</div>
+            <div class="example">
+                <div class="example-label">Goal</div>
+                Provision exactly what is needed — no wasted resources, no surprise failures under load.
+            </div>
+        </div>
+
+        <!-- 3: Hardware type & spec -->
+        <div class="card blue">
+            <div class="card-num">03</div>
+            <div class="card-icon">⚙️</div>
+            <div class="card-title">Choose hardware type &amp; specs</div>
+            <div class="card-desc">Query volume helps decide which type of database or hardware fits best for the workload.</div>
+            <div class="example">
+                <div class="example-label">DB comparison — 10M queries/hr</div>
+                <table class="db-table">
+                    <thead>
+                    <tr>
+                        <th>Database</th>
+                        <th>Capacity</th>
+                        <th>Fit?</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr>
+                        <td>SQL</td>
+                        <td>~50K / hr</td>
+                        <td><span class="tag tag-red">Too slow</span></td>
+                    </tr>
+                    <tr>
+                        <td>NoSQL</td>
+                        <td>~1M / hr</td>
+                        <td><span class="tag tag-green">Good fit</span></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 4: Read vs Write heavy -->
+        <div class="card coral">
+            <div class="card-num">04</div>
+            <div class="card-icon">⚖️</div>
+            <div class="card-title">Read heavy vs write heavy</div>
+            <div class="card-desc">Throughput estimation reveals the read/write ratio, which directly influences database and architecture choices.</div>
+            <div class="example">
+                <div class="example-label">Database decision</div>
+                <div class="rw-split">
+                    <div class="rw-box rw-read">
+                        <div class="rw-label">Read heavy</div>
+                        <div class="rw-db">PostgreSQL</div>
+                        <div class="rw-note">with indexing</div>
+                    </div>
+                    <div class="rw-box rw-write">
+                        <div class="rw-label">Write heavy</div>
+                        <div class="rw-db">Cassandra</div>
+                        <div class="rw-note">or HBase</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">news-feed-system &nbsp;·&nbsp; why capacity estimation</div>
+</div>
+</body>
+</html>
